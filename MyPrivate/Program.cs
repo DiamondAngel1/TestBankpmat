@@ -1,4 +1,5 @@
 ﻿using MyClient.JSON_Converter;
+using MyPrivate.Data;
 using MyPrivate.Data.Entitys;
 using System;
 using System.Collections.Concurrent;
@@ -81,8 +82,21 @@ while (true)
 }
 async Task HandleClientAsync(TcpClient client)
 {
-    MyPrivate.Data.ContextATM context = new MyPrivate.Data.ContextATM();
+
     using NetworkStream networkStream = client.GetStream();
+
+    ContextATM context;
+    try
+    {
+        context = new ContextATM();
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Помилка підключення до бази: {ex.Message}");
+        await networkStream.WriteAsync(Encoding.UTF8.GetBytes("DB error"));
+        return;
+    }
+
     var json_options = new System.Text.Json.JsonSerializerOptions();
     json_options.Converters.Add(new MyClient.JSON_Converter.RequestBaseConverter());
     int tryes = 0;
