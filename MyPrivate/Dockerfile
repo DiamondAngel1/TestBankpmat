@@ -1,9 +1,12 @@
-﻿FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build
-WORKDIR /app
-COPY . ./
-RUN dotnet publish -c Release -o out
+﻿# Етап збірки
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
 
-FROM mcr.microsoft.com/dotnet/runtime:7.0
+COPY . .
+RUN dotnet publish ./MyPrivate/MyPrivate.csproj -c Release -o /app/out
+
+# Етап запуску
+FROM mcr.microsoft.com/dotnet/runtime:8.0
 WORKDIR /app
 COPY --from=build /app/out .
 
