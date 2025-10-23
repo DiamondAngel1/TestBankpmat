@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using MyPrivate.JSON_Converter;
-using VisualClient.Models;
+using MyClient.JSON_Converter;
+using MyClient;
 
 public class LoginCardModel : PageModel
 {
@@ -16,7 +16,7 @@ public class LoginCardModel : PageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
-        var response = await _atm.SendAsync(new RequestType1 { NumberCard = CardNumber });
+        var response = await _atm.SendAsync(new RequestCardCheck { NumberCard = CardNumber });
 
         if (response == null || response.PassCode != 1945)
         {

@@ -6,6 +6,9 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyPrivate", "MyPrivate\MyPrivate.csproj", "{F6D4821A-8545-4887-8FA3-B7CA84676EF4}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyClient", "MyClient\MyClient.csproj", "{E8B50221-3A1D-4AA5-84A4-F8E582A7B0D8}"
+	ProjectSection(ProjectDependencies) = postProject
+		{E6B6FBBE-48D3-4781-8E9D-365E891ACD51} = {E6B6FBBE-48D3-4781-8E9D-365E891ACD51}
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VisualClient", "VisualClient\VisualClient.csproj", "{E6B6FBBE-48D3-4781-8E9D-365E891ACD51}"
 EndProject

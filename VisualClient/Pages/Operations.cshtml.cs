@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using MyClient.JSON_Converter;
-using MyPrivate.JSON_Converter;
 
 public class OperationsModel : PageModel
 {
@@ -16,7 +15,7 @@ public class OperationsModel : PageModel
 
     public async Task OnGetAsync()
     {
-        var request = new RequestType5();
+        var request = new RequestResponseMessage();
         var response = await _atm.SendAsync(request);
 
         ResponseComment = response?.Comment ?? "Банкомат не надіслав відповідь.";

@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc;
-using MyPrivate.JSON_Converter;
+using MyClient.JSON_Converter;
+using MyClient;
 
 public class LoginAuthModel : PageModel
 {
@@ -24,20 +25,25 @@ public class LoginAuthModel : PageModel
             return RedirectToPage("/LoginCard");
         }
 
-        var response = await _atm.SendAsync(new RequestType2
+        var response = await _atm.SendAsync(new RequestAuthOrReg
         {
-            NumberCard = cardNumber,
             FirstName = FirstName,
             LastName = LastName,
             FatherName = FatherName,
             PinCode = PinCode
         });
 
+        if (response.PassCode == 1918)
+        {
+            ErrorMessage = "Вас заблоковано";
+            return Page();
+        }
         if (response == null || response.PassCode != 1945)
         {
             ErrorMessage = "Невірні дані. Спробуйте ще раз.";
             return Page();
         }
+        
 
         HttpContext.Session.SetString("Authorized", "true");
         HttpContext.Session.SetString("UserName", FirstName);

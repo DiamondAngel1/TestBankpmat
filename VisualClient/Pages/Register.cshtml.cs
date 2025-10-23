@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using MyPrivate.JSON_Converter;
-using VisualClient.Models;
+using MyClient.JSON_Converter;
+using MyClient;
 
 public class RegisterModel : PageModel
 {
@@ -24,18 +24,17 @@ public class RegisterModel : PageModel
         do
         {
             number = long.Parse($"{rnd.Next(a, b)}{rnd.Next(a, b)}");
-            response = await _atm.SendAsync(new RequestType1 { NumberCard = number });
+            response = await _atm.SendAsync(new RequestCardCheck { NumberCard = number });
         }
         while (response?.PassCode == 1945); // 1945 - код, що означає, що картка вже існує
-        var check = await _atm.SendAsync(new RequestType1 { NumberCard = number });
+        var check = await _atm.SendAsync(new RequestCardCheck { NumberCard = number });
 
         CardNumber = number;
     }
     public async Task<IActionResult> OnPostAsync()
     {
-        var req = new RequestType2
+        var req = new RequestAuthOrReg
         {
-            NumberCard = CardNumber,
             FirstName = FirstName,
             LastName = LastName,
             FatherName = FatherName,

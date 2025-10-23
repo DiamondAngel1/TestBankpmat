@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using MyPrivate.JSON_Converter;
-
+using MyClient.JSON_Converter;
 public class WithdrawModel : PageModel
 {
     private readonly AtmClientService _atm;
@@ -12,7 +11,7 @@ public class WithdrawModel : PageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
-        var resp = await _atm.SendAsync(new RequestType3 { Sum = Sum });
+        var resp = await _atm.SendAsync(new RequestWithdraw { Sum = Sum });
 
         if (resp?.PassCode == 1945)
             return RedirectToPage("Success");

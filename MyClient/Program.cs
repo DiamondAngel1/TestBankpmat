@@ -1,38 +1,25 @@
-﻿using MyPrivate;
-using System;
-using System.Collections.Concurrent;
-using System.IO;
+﻿using System;
 using System.Net;
-using System.Net.Security;
 using System.Net.Sockets;
-using System.Security.Authentication;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
-using MyPrivate.JSON_Converter;
 using MyClient.JSON_Converter;
-using System.Runtime.ExceptionServices;
-using static System.Collections.Specialized.BitVector32;
+using MyClient;
+
 
 Console.InputEncoding = Encoding.UTF8;
 Console.OutputEncoding = Encoding.UTF8;
 
 int port = 5000;
-//string serverIp = IPAddress.Loopback.ToString();
-string serverIp = "18.185.184.246";
+string serverIp = IPAddress.Loopback.ToString();
+//string serverIp = "18.185.184.246";
 TcpClient myClient = new TcpClient();
-
 
 try
 {
 	await myClient.ConnectAsync(IPAddress.Parse(serverIp), port);
-	SslStream stream = new(
-		myClient.GetStream(),
-			false,
-			ValidateServerCertificate,
-			null
-	);
-	await stream.AuthenticateAsClientAsync(serverIp, null, SslProtocols.Tls12, false);
+    using NetworkStream networkStream = myClient.GetStream();
+
 	Console.WriteLine("Ви підключились до банкомату. ");
 	var options = new JsonSerializerOptions();
 	options.Converters.Add(new RequestBaseConverter());
@@ -52,8 +39,8 @@ try
             return;
         }
 
-        var check = new RequestType1 { NumberCard = cardNumber };
-        response1 = await RequestAsync(stream, check, options);
+        var check = new RequestCardCheck { NumberCard = cardNumber };
+        response1 = await RequestAsync(networkStream, check, options);
 
         if (response1?.PassCode == 1789)
         {
@@ -75,7 +62,7 @@ try
         do
         {
             cardNumber = long.Parse($"{rnd.Next(a, b)}{rnd.Next(a, b)}");
-            response1 = await RequestAsync(stream, new RequestType1 { NumberCard = cardNumber }, options);
+            response1 = await RequestAsync(networkStream, new RequestCardCheck { NumberCard = cardNumber }, options);
         }
         while (response1?.PassCode == 1945);
 
@@ -94,14 +81,14 @@ try
             return;
         }
 
-        var register = new RequestType2
+        var register = new RequestAuthOrReg
         {
             FirstName = fname,
             LastName = lname,
             FatherName = patr,
             PinCode = pin
         };
-        var regResp = await RequestAsync(stream, register, options);
+        var regResp = await RequestAsync(networkStream, register, options);
         PrintResponse(regResp);
         if (regResp?.PassCode != 1945) return;
     }
@@ -122,14 +109,14 @@ try
             return;
         }
 
-        var auth = new RequestType2
+        var auth = new RequestAuthOrReg
         {
             FirstName = fname,
             LastName = lname,
             FatherName = patr,
             PinCode = pin
         };
-        var authResp = await RequestAsync(stream, auth, options);
+        var authResp = await RequestAsync(networkStream, auth, options);
 
         if (authResp?.PassCode == 1945)
         {
@@ -170,8 +157,8 @@ try
 			Console.Write("Сума зняття: ");
 			if (decimal.TryParse(Console.ReadLine(), out decimal sum))
 			{
-				var request = new RequestType3 { Sum = sum };
-				var resp = await RequestAsync(stream, request, options);
+				var request = new RequestWithdraw { Sum = sum };
+				var resp = await RequestAsync(networkStream, request, options);
 				PrintResponse(resp);
 			}
 			else Console.WriteLine("Невірна сума.");
@@ -181,16 +168,16 @@ try
 			Console.Write("Сума поповнення: ");
 			if (decimal.TryParse(Console.ReadLine(), out decimal sum))
 			{
-				var request = new RequestType4 { Sum = sum };
-				var resp = await RequestAsync(stream, request, options);
+				var request = new RequestDeposit { Sum = sum };
+				var resp = await RequestAsync(networkStream, request, options);
 				PrintResponse(resp);
 			}
 			else Console.WriteLine("Невірна сума.");
 		}
 		else if (choice == "3")
 		{
-			var request = new RequestType5();
-			var resp = await RequestAsync(stream, request, options);
+			var request = new RequestViewBalance();
+			var resp = await RequestAsync(networkStream, request, options);
 			PrintResponse(resp);
 		}
 		else
@@ -211,7 +198,7 @@ finally
 	Console.WriteLine("З'єднання з банкоматом завершено.");
 }
 
-static async Task<ServerResponse> RequestAsync(SslStream stream, RequestBase request, JsonSerializerOptions options)
+static async Task<ServerResponse> RequestAsync(NetworkStream stream, RequestBase request, JsonSerializerOptions options)
 {
 	string jsonrequest = JsonSerializer.Serialize(request, options);
 	byte[] data = Encoding.UTF8.GetBytes(jsonrequest);
@@ -256,12 +243,11 @@ static void PrintResponse(ServerResponse? response)
 		case 1789:
 			Console.WriteLine("В базі даних немає такого номеру картки");
 			break;
-		default:
+        case 1111:
+            Console.WriteLine("Cума поповнення перевищує ліміт 100 000 ₴");
+            break;
+        default:
 			Console.WriteLine("Банкомат надіслав невідомий код відповіді.");
 			break;
 	}
-}
-static bool ValidateServerCertificate(object sender, X509Certificate cert, X509Chain chain, SslPolicyErrors errors)
-{
-	return true;
 }

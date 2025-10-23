@@ -1,24 +1,20 @@
 ﻿using MyClient.JSON_Converter;
 using MyPrivate.Data.Entitys;
-using MyPrivate.JSON_Converter;
 using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Net;
-using System.Net.Security;
 using System.Net.Sockets;
-using System.Security.Authentication;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-int port = 5000; // Port to listen on
-TcpListener tcpListener = new TcpListener(IPAddress.Any, port); // Listening on port 5000 | пам'ять виділяється динамічно
-const int MinIntervalMs = 5000; // Minimum interval between connections in milliseconds
-const int MaxConcurrentClients = 100; //максимальна к-сть клієнтів
-ConcurrentDictionary<IPEndPoint, DateTime> clientLastAccess = new(); //фіксація по публічним IP - адресам клієнтів
-ConcurrentBag<IPEndPoint> bannedClients = new(); // Collection to store banned clients
-SemaphoreSlim semaphoreSlim = new SemaphoreSlim(MaxConcurrentClients); // Semaphore to control access to the shared resource
+int port = 5000;
+TcpListener tcpListener = new TcpListener(IPAddress.Any, port); 
+const int MinIntervalMs = 5000; 
+const int MaxConcurrentClients = 100; 
+ConcurrentDictionary<IPEndPoint, DateTime> clientLastAccess = new(); 
+ConcurrentBag<IPEndPoint> bannedClients = new(); 
+SemaphoreSlim semaphoreSlim = new SemaphoreSlim(MaxConcurrentClients);
 IPEndPoint iP;
 DateTime now;
 tcpListener.Start();
@@ -28,26 +24,25 @@ while (true)
 {
     try
     {
-        await semaphoreSlim.WaitAsync(); // Wait for an available slot
+        await semaphoreSlim.WaitAsync();
 
-        client = await tcpListener.AcceptTcpClientAsync(); //звільняємо потік при очікуванні клієнта
+        client = await tcpListener.AcceptTcpClientAsync(); 
 
-        /// Check if the client is already connected or if the last access time is within the minimum interval
-        /// 
-        iP = client.Client.RemoteEndPoint as IPEndPoint; //зберігання IP-адреси клієнта
+        
+        iP = client.Client.RemoteEndPoint as IPEndPoint; 
         if (iP == null)
         {
             Console.WriteLine("Не вдалося отримати IP-адресу клієнта.");
             client.Close();
-            semaphoreSlim.Release(); // Release the semaphore slot
-            continue; // Skip processing this client
+            semaphoreSlim.Release(); 
+            continue; 
         }
-        else if (bannedClients.Contains(iP)) // Check if the client is banned
+        else if (bannedClients.Contains(iP)) 
         {
             Console.WriteLine($"Спроба підключення від заблокованого клієнта: {iP}");
-            client.Close(); // Close the connection if the client is banned
-            semaphoreSlim.Release(); // Release the semaphore slot
-            continue; // Skip processing this client
+            client.Close();
+            semaphoreSlim.Release();
+            continue; 
         }
         if (clientLastAccess.ContainsKey(iP))
         {
@@ -63,9 +58,9 @@ while (true)
 
                     client.Close();
 
-                    semaphoreSlim.Release(); // Release the semaphore slot
+                    semaphoreSlim.Release(); 
 
-                    continue; // Skip processing this client
+                    continue; 
                 }
 
             }
@@ -73,87 +68,78 @@ while (true)
         }
         else
         {
-            clientLastAccess.TryAdd(iP, DateTime.UtcNow); // Add new client with current time
+            clientLastAccess.TryAdd(iP, DateTime.UtcNow); 
 
         }
-        _ = HandleClientAsync(client).ContinueWith(_ => semaphoreSlim.Release()); // Start handling the client asynchronously
+        _ = HandleClientAsync(client).ContinueWith(_ => semaphoreSlim.Release()); 
     }
     catch (Exception ex)
     {
         Console.WriteLine($"Помилка: {ex.Message}");
     }
-
-
-
-
-}//HandShake and SSL/TLS encryption
+}
 async Task HandleClientAsync(TcpClient client)
 {
     MyPrivate.Data.ContextATM context = new MyPrivate.Data.ContextATM();
     using NetworkStream networkStream = client.GetStream();
-    using SslStream sslStream = new SslStream(networkStream, false); // Accept any certificate
     var json_options = new System.Text.Json.JsonSerializerOptions();
-    json_options.Converters.Add(new MyPrivate.JSON_Converter.RequestBaseConverter());
+    json_options.Converters.Add(new MyClient.JSON_Converter.RequestBaseConverter());
     int tryes = 0;
-    RequestBase? request = null;
+    MyClient.JSON_Converter.RequestBase? request = null;
 
     try
     {
-        string certPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "server.pfx");
-        X509Certificate2 certificate = new X509Certificate2(certPath, "password"); // Replace with your certificate password
-        await sslStream.AuthenticateAsServerAsync(certificate, false, SslProtocols.Tls12, true);
         Console.WriteLine("Client connected: " + client.Client.RemoteEndPoint);
 
-        UserEntity? user = null; // Initialize user variable
-        bool isAuthenticated = false; // Flag to check if the client is authenticated
+        UserEntity? user = null;
+        bool isAuthenticated = false; 
         long currentcardnumber = 0;
         while (true)
         {
-            // Виділяємо новий буфер для кожного запиту
             byte[] buffer = new byte[4096];
-            int bytesRead = await sslStream.ReadAsync(buffer, 0, buffer.Length);
+            int bytesRead = await networkStream.ReadAsync(buffer, 0, buffer.Length);
             if (bytesRead == 0)
             {
                 Console.WriteLine("Клієнт відключився: " + client.Client.RemoteEndPoint);
-                break; // Exit the loop if the client disconnects
+                break;
             }
             string message = Encoding.UTF8.GetString(buffer, 0, bytesRead);
-            Array.Clear(buffer, 0, buffer.Length); // Clear the buffer for the next read
+            Array.Clear(buffer, 0, buffer.Length);
             Console.WriteLine($"Отримано повідомлення від користувача {client.Client.RemoteEndPoint}: {message}");
             request = System.Text.Json.JsonSerializer.Deserialize<RequestBase>(message, json_options);
             if (request == null)
             {
                 Console.WriteLine("Отримано нульовий запит, обробка пропущена.");
-                continue; // Skip processing if the request is null
+                continue;
             }
             else
             {
-                if (request is RequestType1 request1)
+                if (request is RequestCardCheck request1)
                 {
                     currentcardnumber = request1.NumberCard;
                     user = context.Users.FirstOrDefault(u => u.CardNumber == currentcardnumber);
                     if (user != null)
                     {
-                        var response = new RequestType0
+                        var response = new RequestResponseMessage
                         {
                             Comment = "Номер картки існує. Будь ласка, введіть PIB та PIN-код",
                             PassCode = 1945
                         };
                         byte[] responseBuffer = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(response, json_options));
-                        await sslStream.WriteAsync(responseBuffer);
+                        await networkStream.WriteAsync(responseBuffer);
                     }
                     else
                     {
-                        var response = new RequestType0
+                        var response = new RequestResponseMessage
                         {
                             Comment = "Такої карти не існує",
                             PassCode = 1789
                         };
                         byte[] responseBuffer = Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(response, json_options));
-                        await sslStream.WriteAsync(responseBuffer, 0, responseBuffer.Length);
+                        await networkStream.WriteAsync(responseBuffer, 0, responseBuffer.Length);
                     }
                 }
-                else if (request is RequestType2 request2)
+                else if (request is RequestAuthOrReg request2)
                 {
                     if (user != null)
                     {
@@ -162,13 +148,13 @@ async Task HandleClientAsync(TcpClient client)
                         if ((user.FirstName.Equals(request2.FirstName)) && (user.FatherName.Equals(request2.FatherName)) && (user.LastName.Equals(request2.LastName) && (user.PinCode == request2.PinCode)))
                         {
                             isAuthenticated = true;
-                            var response = new RequestType0
+                            var response = new RequestResponseMessage
                             {
                                 Comment = "Авторизація успішна.",
                                 PassCode = 1945
                             };
                             byte[] responseBuffer = Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(response, json_options));
-                            await sslStream.WriteAsync(responseBuffer, 0, responseBuffer.Length);
+                            await networkStream.WriteAsync(responseBuffer, 0, responseBuffer.Length);
                         }
                         else
                         {
@@ -177,24 +163,24 @@ async Task HandleClientAsync(TcpClient client)
                             {
                                 bannedClients.Add(client.Client.RemoteEndPoint as IPEndPoint);
                                 Console.WriteLine($"Клієнт {client.Client.RemoteEndPoint as IPEndPoint} заблокований через велику кількість невдалих спроб автентифікації.");
-                                var response = new RequestType0
+                                var response = new RequestResponseMessage
                                 {
                                     Comment = "Вас забанили через велику кількість невдалих спроб автентифікації.",
                                     PassCode = 1918
                                 };
                                 byte[] responseBuffer1 = Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(response, json_options));
-                                await sslStream.WriteAsync(responseBuffer1, 0, responseBuffer1.Length);
+                                await networkStream.WriteAsync(responseBuffer1, 0, responseBuffer1.Length);
                                 break;
                             }
                             else
                             {
-                                var response = new RequestType0
+                                var response = new RequestResponseMessage
                                 {
                                     Comment = "Помилка автентифікації",
                                     PassCode = 1939
                                 };
                                 byte[] responseBuffer = Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(response, json_options));
-                                await sslStream.WriteAsync(responseBuffer, 0, responseBuffer.Length);
+                                await networkStream.WriteAsync(responseBuffer, 0, responseBuffer.Length);
                             }
                         }
                     }
@@ -222,16 +208,16 @@ async Task HandleClientAsync(TcpClient client)
                         user = new_user;
                         isAuthenticated = true;
 
-                        var response = new RequestType0
+                        var response = new RequestResponseMessage
                         {
                             Comment = "Користувача зареєстровано успішно",
                             PassCode = 1945
                         };
                         byte[] responseBuffer = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(response, json_options));
-                        await sslStream.WriteAsync(responseBuffer);
+                        await networkStream.WriteAsync(responseBuffer);
                     }
                 }
-                else if (request is RequestType3 request3)
+                else if (request is RequestWithdraw request3)
                 {
                     if (user != null && isAuthenticated == true)
                     {
@@ -242,60 +228,77 @@ async Task HandleClientAsync(TcpClient client)
                             {
                                 balance.Amount -= request3.Sum;
                                 context.SaveChanges();
-                                var response = new RequestType0
+                                var response = new RequestResponseMessage
                                 {
                                     Comment = "Транзакція успішна",
                                     PassCode = 1945
                                 };
                                 byte[] responseBuffer = Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(response, json_options));
-                                await sslStream.WriteAsync(responseBuffer, 0, responseBuffer.Length);
+                                await networkStream.WriteAsync(responseBuffer, 0, responseBuffer.Length);
                             }
                             else
                             {
-                                var response = new RequestType0
+                                var response = new RequestResponseMessage
                                 {
                                     Comment = "Недостатньо коштів на рахунку",
                                     PassCode = 1939
                                 };
                                 byte[] responseBuffer = Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(response, json_options));
-                                await sslStream.WriteAsync(responseBuffer, 0, responseBuffer.Length);
+                                await networkStream.WriteAsync(responseBuffer, 0, responseBuffer.Length);
                             }
                         }
                     }
                 }
-                else if (request is RequestType4 request4)
+                else if (request is RequestDeposit request4)
                 {
                     if (user != null && isAuthenticated == true)
                     {
                         var balance = context.Balances.FirstOrDefault(c => c.UserId == user.Id);
                         if (balance != null)
                         {
-                            balance.Amount += request4.Sum;
-                            context.SaveChanges();
-                            var response = new RequestType0
+                            if (request4.Sum > 100000)
                             {
-                                Comment = "Депозит успішний.",
-                                PassCode = 1945
-                            };
-                            byte[] responseBuffer = Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(response, json_options));
-                            await sslStream.WriteAsync(responseBuffer, 0, responseBuffer.Length);
+                                var response = new RequestResponseMessage
+                                {
+                                    PassCode = 1111,
+                                    Comment = "Сума поповнення перевищує ліміт 100 000 ₴"
+                                };
+                                byte[] responseBuffer = Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(response, json_options));
+                                await networkStream.WriteAsync(responseBuffer, 0, responseBuffer.Length);
+                            }
+                            else
+                            {
+                                var response = new RequestResponseMessage
+                                {
+                                    Comment = "Депозит успішний.",
+                                    PassCode = 1945
+                                };
+                                balance.Amount += request4.Sum;
+                                context.SaveChanges();
+                                byte[] responseBuffer = Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(response, json_options));
+                                await networkStream.WriteAsync(responseBuffer, 0, responseBuffer.Length);
+                                
+                            }
+
+                                
+                            
                         }
                     }
                 }
-                else if (request is RequestType5 request5)
+                else if (request is RequestViewBalance request5)
                 {
                     if (user != null && isAuthenticated == true)
                     {
                         var balance = context.Balances.FirstOrDefault(c => c.UserId == user.Id);
                         if (balance != null)
                         {
-                            var response = new RequestType0
+                            var response = new RequestResponseMessage
                             {
                                 Comment = $"На вашому рахунку: {balance.Amount}",
                                 PassCode = 1945
                             };
                             byte[] responseBuffer = Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(response, json_options));
-                            await sslStream.WriteAsync(responseBuffer, 0, responseBuffer.Length);
+                            await networkStream.WriteAsync(responseBuffer, 0, responseBuffer.Length);
                         }
                     }
                 }

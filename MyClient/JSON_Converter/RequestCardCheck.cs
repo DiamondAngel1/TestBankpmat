@@ -4,11 +4,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MyPrivate.JSON_Converter
+namespace MyClient.JSON_Converter
 {
-    public class RequestType1 : RequestBase
+    public class RequestCardCheck : RequestBase
     {
-        public override Int32 Type { get; } = 1; // Default type for this request
+        public override string Type { get; } = "CARD_CHECK"; // Default type for this request
         public long NumberCard { get; set; } = 0; // Default value for card number
     }
 }

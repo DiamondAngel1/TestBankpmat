@@ -6,11 +6,11 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
-namespace MyPrivate.JSON_Converter
+namespace MyClient.JSON_Converter
 {
     public abstract class RequestBase
     {
-        public abstract Int32 Type { get; } // Abstract property to get the type of request
+        public abstract string Type { get; } // Abstract property to get the type of request
     }
     public class RequestBaseConverter : JsonConverter<RequestBase>
     {
@@ -18,16 +18,21 @@ namespace MyPrivate.JSON_Converter
         {
             using var doc = JsonDocument.ParseValue(ref reader);
             var root = doc.RootElement;
-            Int32 type = root.GetProperty("Type").GetInt32();
+            string type = root.GetProperty("Type").ToString();
 
             return type switch
             {
-                0 => JsonSerializer.Deserialize<RequestType0>(root.GetRawText(), options),
-                1 => JsonSerializer.Deserialize<RequestType1>(root.GetRawText(), options),
-                2 => JsonSerializer.Deserialize<RequestType2>(root.GetRawText(), options),
-                _ => throw new NotSupportedException($"Unknown type: {type}")
+                "MESSAGE" => JsonSerializer.Deserialize<RequestResponseMessage>(root.GetRawText(), options),
+                "CARD_CHECK" => JsonSerializer.Deserialize<RequestCardCheck>(root.GetRawText(), options),
+                "AUTH_OR_REGISTER" => JsonSerializer.Deserialize<RequestAuthOrReg>(root.GetRawText(), options),
+                "DEPOSIT" => JsonSerializer.Deserialize<RequestDeposit>(root.GetRawText(), options),
+                "WITHDRAW" => JsonSerializer.Deserialize<RequestWithdraw>(root.GetRawText(), options),
+                "VIEW_BALANCE" => JsonSerializer.Deserialize<RequestViewBalance>(root.GetRawText(), options),
+                _ => throw new NotSupportedException($"Unknown request type: {type}")
             };
+
         }
+        
 
         public override void Write(Utf8JsonWriter writer, RequestBase value, JsonSerializerOptions options)
         {

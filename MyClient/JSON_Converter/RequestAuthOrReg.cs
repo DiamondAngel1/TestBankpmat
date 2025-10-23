@@ -4,12 +4,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MyPrivate.JSON_Converter
+namespace MyClient.JSON_Converter
 {
-    public class RequestType2 : RequestBase
+    public class RequestAuthOrReg : RequestBase
     {
-        public override Int32 Type { get; } = 2; // Default type for this request
-        public long NumberCard { get; set; } = 0; // Default value for card number
+        public override string Type { get; } = "AUTH_OR_REGISTER"; // Default type for this request
         public string FirstName { get; set; } = string.Empty; // Default value for first name
         public string LastName { get; set; } = string.Empty; // Default value for last name
 

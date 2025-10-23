@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using MyClient.JSON_Converter;
-using MyPrivate.JSON_Converter;
+using MyClient;
 
 public class DashboardModel : PageModel
 {
@@ -16,7 +16,7 @@ public class DashboardModel : PageModel
         if (HttpContext.Session.GetString("Authorized") != "true")
             return RedirectToPage("/LoginCard");
         UserName = HttpContext.Session.GetString("UserName") ?? " Î≥∫ÌÚ";
-        var resp = await _atm.SendAsync(new RequestType5());
+        var resp = await _atm.SendAsync(new RequestViewBalance());
 
         if (resp?.PassCode == 1945)
             BalanceMessage = resp.Comment;

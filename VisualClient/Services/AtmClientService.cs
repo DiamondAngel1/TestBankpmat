@@ -1,18 +1,17 @@
 ﻿using System.Net;
-using System.Net.Security;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
-using MyPrivate.JSON_Converter;
-using VisualClient.Models;
+using MyClient.JSON_Converter;
+using MyClient;
+using VisualClient.Pages;
 
 public class AtmClientService
 {
-    //private readonly string _serverIp = IPAddress.Loopback.ToString();
-    private readonly string _serverIp = "18.185.184.246"; 
+    private readonly string _serverIp = IPAddress.Loopback.ToString();
     private readonly int _port = 5000;
     private TcpClient _client;
-    private SslStream _stream;
+    private NetworkStream _stream;
     private readonly JsonSerializerOptions _jsonOptions;
 
     public AtmClientService()
@@ -30,8 +29,7 @@ public class AtmClientService
             {
                 _client = new TcpClient();
                 await _client.ConnectAsync(_serverIp, _port);
-                _stream = new SslStream(_client.GetStream(), false, (_, _, _, _) => true);
-                await _stream.AuthenticateAsClientAsync(_serverIp);
+                _stream = _client.GetStream();
             }
 
             string requestJson = JsonSerializer.Serialize(request, _jsonOptions);
@@ -53,7 +51,6 @@ public class AtmClientService
             } while (bytesRead == buffer.Length);
 
             string responseJson = Encoding.UTF8.GetString(ms.ToArray());
-
             var response = JsonSerializer.Deserialize<ServerResponse>(responseJson);
             return response;
         }
@@ -61,7 +58,7 @@ public class AtmClientService
         {
             return null;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             return null;
         }

@@ -4,12 +4,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MyPrivate.JSON_Converter
+namespace MyClient.JSON_Converter
 {
-    public class RequestType3 : RequestBase
+    public class RequestWithdraw : RequestBase
     {
 
-        public override Int32 Type { get; } = 3; // Default type for this request
+        public override string Type { get; } = "WITHDRAW"; // Default type for this request
         public Decimal Sum { get; set; } = 0; // Default value for sum
     }
 }
