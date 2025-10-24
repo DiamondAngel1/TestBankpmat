@@ -29,7 +29,7 @@ public class AtmClientService
             if (_client == null || !_client.Connected)
             {
                 _client = new TcpClient();
-                await _client.ConnectAsync("testbankpmat.onrender.com", _port);
+                await _client.ConnectAsync("TestBankpmat", _port);
                 _stream = _client.GetStream();
             }
 
