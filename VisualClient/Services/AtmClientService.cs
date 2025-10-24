@@ -8,8 +8,8 @@ using VisualClient.Pages;
 
 public class AtmClientService
 {
-    //private readonly string _serverIp = IPAddress.Loopback.ToString();
-    private readonly string _serverIp = "18.185.184.246";
+    private readonly string _serverIp = IPAddress.Loopback.ToString();
+    //private readonly string _serverIp = "18.185.184.246";
     private readonly int _port = 10000;
     private TcpClient _client;
     private NetworkStream _stream;
@@ -29,7 +29,7 @@ public class AtmClientService
             if (_client == null || !_client.Connected)
             {
                 _client = new TcpClient();
-                await _client.ConnectAsync(_serverIp, _port);
+                await _client.ConnectAsync("testbankpmat.onrender.com", _port);
                 _stream = _client.GetStream();
             }
 
