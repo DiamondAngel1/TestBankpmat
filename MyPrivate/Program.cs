@@ -121,13 +121,14 @@ async Task HandleClientAsync(TcpClient client)
             string message = Encoding.UTF8.GetString(buffer, 0, bytesRead);
             Array.Clear(buffer, 0, buffer.Length);
             Console.WriteLine($"Отримано повідомлення від користувача {client.Client.RemoteEndPoint}: {message}");
-            request = System.Text.Json.JsonSerializer.Deserialize<RequestBase>(message, json_options);
             if (!message.TrimStart().StartsWith("{"))
             {
                 Console.WriteLine("Непідтримуваний запит (не JSON), ігноруємо.");
                 client.Close();
                 return;
             }
+            request = System.Text.Json.JsonSerializer.Deserialize<RequestBase>(message, json_options);
+            
 
             if (request == null)
             {
